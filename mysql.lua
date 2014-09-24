@@ -432,6 +432,8 @@ function mysql:RawQuery(query, callback, flags, ...)
 				end;
 			end;
 		end;
+	else
+		ErrorNoHalt(string.format("[mysql] Unsupported module \"%s\"!\n", Module));
 	end;
 end;
 
@@ -475,6 +477,10 @@ function mysql:Think()
 			table.remove(QueueTable, 1);
 		end;
 	end;
+end;
+
+function mysql:SetModule(moduleName)
+	Module = moduleName;
 end;
 
 -- Called when the database connects sucessfully.
