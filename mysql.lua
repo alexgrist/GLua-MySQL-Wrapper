@@ -376,8 +376,6 @@ end;
 
 -- A function to query the MySQL database.
 function mysql:RawQuery(query, callback, flags, ...)
-	MsgC(Color(241, 196, 15), string.format("[mysql] MySQL Query: %s\n", query));
-
 	if (!self.connection) then
 		self:Queue(query);
 	end;
@@ -437,6 +435,7 @@ function mysql:RawQuery(query, callback, flags, ...)
 	end;
 end;
 
+-- A function to add a query to the queue.
 function mysql:Queue(queryString, callback)
 	if (type(queryString) == "string") then
 		QueueTable[#QueueTable + 1] = {queryString, callback};
@@ -479,6 +478,7 @@ function mysql:Think()
 	end;
 end;
 
+-- A function to set the module that should be used.
 function mysql:SetModule(moduleName)
 	Module = moduleName;
 end;
