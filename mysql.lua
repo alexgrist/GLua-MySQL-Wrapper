@@ -467,7 +467,9 @@ end;
 function mysql:Think()
 	if (#QueueTable > 0) then
 		if (type(QueueTable[1]) == "table") then
-			local queryString, callback = unpack(QueueTable[1]);
+			local queueObj = QueueTable[1];
+			local queryString = queueObj[1];
+			local callback = queueObj[2];
 			
 			if (type(queryString) == "string") then
 				self:RawQuery(queryString, callback);
