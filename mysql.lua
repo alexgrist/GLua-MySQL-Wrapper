@@ -1,5 +1,5 @@
 --[[
-	mysql - 1.0.0
+	mysql - 1.0.2
 	A simple MySQL wrapper for Garry's Mod.
 
 	Alexander Grist-Hucker
