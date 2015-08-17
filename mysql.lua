@@ -9,10 +9,16 @@
 mysql = mysql or {};
 
 local QueueTable = {};
-local Module = "mysqloo"
+local Module = "sqlite";
 local type = type;
 local tostring = tostring;
 local table = table;
+
+--[[
+	Phrases
+--]]
+
+local MODULE_NOT_EXIST = "[mysql] The %s module does not exist!\n";
 
 --[[
 	Begin Query Class.
@@ -242,6 +248,19 @@ local function BuildDeleteQuery(queryObj)
 	return table.concat(queryString);
 end;
 
+local function BuildDropQuery(queryObj)
+	local queryString = {"DROP TABLE"}
+
+	if (type(queryObj.tableName) == "string") then
+		queryString[#queryString + 1] = " `"..queryObj.tableName.."`";
+	else
+		ErrorNoHalt("[mysql] No table name specified!\n");
+		return;
+	end;
+
+	return table.concat(queryString);
+end;
+
 local function BuildCreateQuery(queryObj)
 	local queryString = {"CREATE TABLE IF NOT EXISTS"};
 
@@ -258,7 +277,11 @@ local function BuildCreateQuery(queryObj)
 		local createList = {};
 
 		for i = 1, #queryObj.createList do
-			createList[#createList + 1] = queryObj.createList[i][1].." "..queryObj.createList[i][2];
+			if (Module == "sqlite") then
+				createList[#createList + 1] = queryObj.createList[i][1].." "..string.gsub(string.gsub(string.gsub(queryObj.createList[i][2], "AUTO_INCREMENT", ""), "AUTOINCREMENT", ""), "INT ", "INTEGER ");
+			else
+				createList[#createList + 1] = queryObj.createList[i][1].." "..queryObj.createList[i][2];
+			end;
 		end;
 
 		queryString[#queryString + 1] = " "..table.concat(createList, ", ").."," ;
@@ -286,6 +309,8 @@ function QUERY_CLASS:Execute(bQueueQuery)
 		queryString = BuildUpdateQuery(self);
 	elseif (queryType == "delete") then
 		queryString = BuildDeleteQuery(self);
+	elseif (queryType == "drop") then
+		queryString = BuildDropQuery(self);
 	elseif (queryType == "create") then
 		queryString = BuildCreateQuery(self);
 	end;
@@ -319,12 +344,16 @@ function mysql:Delete(tableName)
 	return QUERY_CLASS:New(tableName, "DELETE");
 end;
 
+function mysql:Drop(tableName)
+	return QUERY_CLASS:New(tableName, "DROP");
+end;
+
 function mysql:Create(tableName)
 	return QUERY_CLASS:New(tableName, "CREATE");
 end;
 
 -- A function to connect to the MySQL database.
-function mysql:Connect(host, username, password, database, port)
+function mysql:Connect(host, username, password, database, port, socket, flags)
 	if (!port) then
 		port = 3306;
 	end;
@@ -339,7 +368,7 @@ function mysql:Connect(host, username, password, database, port)
 		if (tmysql) then
 			local errorText = nil;
 
-			self.connection, errorText = tmysql.initialize(host, username, password, database, port);
+			self.connection, errorText = tmysql.initialize(host, username, password, database, port, socket, flags);
 
 			if (!self.connection) then
 				self:OnConnectionFailed(errorText);
@@ -347,7 +376,7 @@ function mysql:Connect(host, username, password, database, port)
 				self:OnConnected();
 			end;
 		else
-			ErrorNoHalt("[mysql] The tmysql4 module does not exist!\n");
+			ErrorNoHalt(string.format(MODULE_NOT_EXIST, Module));
 		end;
 	elseif (Module == "mysqloo") then
 		if (type(mysqloo) != "table") then
@@ -355,7 +384,7 @@ function mysql:Connect(host, username, password, database, port)
 		end;
 	
 		if (mysqloo) then
-			self.connection = mysqloo.connect(host, username, password, database, port);
+			self.connection = mysqloo.connect(host, username, password, database, port, socket, flags);
 
 			self.connection.onConnected = function(database)
 				mysql:OnConnected();
@@ -367,7 +396,7 @@ function mysql:Connect(host, username, password, database, port)
 
 			self.connection:connect();
 		else
-			ErrorNoHalt("[mysql] The mysqloo module does not exist!\n");
+			ErrorNoHalt(string.format(MODULE_NOT_EXIST, Module));
 		end;
 	elseif (Module == "sqlite") then
 		mysql:OnConnected();
@@ -446,12 +475,12 @@ end;
 function mysql:Escape(text)
 	if (self.connection) then
 		if (Module == "tmysql4") then
-			return tmysql.escape(text);
+			return self.connection:Escape(text);
 		elseif (Module == "mysqloo") then
 			return self.connection:escape(text);
-		elseif (Module == "sqlite") then
-			return sql.SQLStr(text);
 		end;
+	else
+		return sql.SQLStr(string.gsub(text, "\"", "'"), true);
 	end;
 end;
 
