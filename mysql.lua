@@ -379,7 +379,13 @@ function mysql:Connect(host, username, password, database, port, socket, flags)
 		end;
 	
 		if (mysqloo) then
-			self.connection = mysqloo.connect(host, username, password, database, port, socket, flags);
+			local clientFlag = flags or 0;
+
+			if (type(socket) == "string") then
+				self.connection = mysqloo.connect(host, username, password, database, port);
+			else
+				self.connection = mysqloo.connect(host, username, password, database, port, socket, clientFlag);
+			end;
 
 			self.connection.onConnected = function(database)
 				mysql:OnConnected();
@@ -407,17 +413,19 @@ function mysql:RawQuery(query, callback, flags, ...)
 	if (Module == "tmysql4") then
 		local queryFlag = flags or QUERY_FLAG_ASSOC;
 
-		self.connection:Query(query, function(result, queryStatus, errorText)
-			if (queryStatus == QUERY_SUCCESS) then
+		self.connection:Query(query, function(result)
+			local queryStatus = result[1]["status"];
+
+			if (queryStatus) then
 				if (type(callback) == "function") then
-					local bStatus, value = pcall(callback, result, queryStatus, errorText);
+					local bStatus, value = pcall(callback, result[1]["data"], queryStatus, result[1]["lastid"]);
 
 					if (!bStatus) then
 						ErrorNoHalt(string.format("[mysql] MySQL Callback Error!\n%s\n", value));
 					end;
 				end;
 			else
-				ErrorNoHalt(string.format("[mysql] MySQL Query Error!\nQuery: %s\n%s\n", query, errorText));
+				ErrorNoHalt(string.format("[mysql] MySQL Query Error!\nQuery: %s\n%s\n", query, result[1]["error"]));
 			end;
 		end, queryFlag, ...);
 	elseif (Module == "mysqloo") then
