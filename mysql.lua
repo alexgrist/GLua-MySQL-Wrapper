@@ -155,11 +155,6 @@ local function BuildSelectQuery(queryObj)
 		queryString[#queryString + 1] = queryObj.limit;
 	end;
 
-	if (type(queryObj.limit) == "number") then
-		queryString[#queryString + 1] = " LIMIT ";
-		queryString[#queryString + 1] = queryObj.limit;
-	end;
-
 	return table.concat(queryString);
 end;
 
