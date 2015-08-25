@@ -358,8 +358,6 @@ function mysql:Connect(host, username, password, database, port, socket, flags)
 			require("tmysql4");
 		end;
 
-		MsgC(Color(235, 25, 25), "[mysql] Warning: tmysql4 is semi-unsupported!\n");
-
 		if (tmysql) then
 			local errorText = nil;
 
