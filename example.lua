@@ -1,4 +1,4 @@
-include("mysql");
+include("mysql.lua");
 
 mysql:Connect("localhost", "example", "password", "example", 3306);
 
@@ -43,6 +43,19 @@ hook.Add("PlayerInitialSpawn", "example.PlayerInitialSpawn", function(player)
 		end);
 	queryObj:Execute();
 
+end);
+
+timer.Create("example.SaveData", 60, 0, function()
+	for k, v in pairs(player.GetAll()) do
+
+		--[[ Queue and update to the player's name in the database (would usually be for data saving). --]]
+		local updateObj = mysql:Update("example");
+			updateObj:Update("_Name", v:Name());
+			updateObj:Where("_SteamID", v:SteamID());
+		updateObj:Execute(true);
+		--[[ Passing true to Execute will queue the query. ]]--
+
+	end;
 end);
 
 --[[ This will poll the database queue every second and process any queued queries. --]]
