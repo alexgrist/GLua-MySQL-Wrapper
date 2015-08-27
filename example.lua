@@ -6,9 +6,9 @@ hook.Add("DatabaseConnected", "example.DatabaseConnected", function()
 
 	--[[ Create the "example" table if it does not exist. --]]
 	local queryObj = mysql:Create("example");
-		queryObj:Create("id", "int(11) NOT NULL AUTO_INCREMENT");
-		queryObj:Create("name", "varchar(255) NOT NULL");
-		queryObj:Create("steam_id", "varchar(25) NOT NULL");
+		queryObj:Create("id", "INT NOT NULL AUTO_INCREMENT");
+		queryObj:Create("name", "VARCHAR(255) NOT NULL");
+		queryObj:Create("steam_id", "VARCHAR(25) NOT NULL");
 		queryObj:PrimaryKey("id");
 	queryObj:Execute();
 

@@ -256,6 +256,19 @@ local function BuildDropQuery(queryObj)
 	return table.concat(queryString);
 end;
 
+local function BuildTruncateQuery(queryObj)
+	local queryString = {"TRUNCATE TABLE"}
+
+	if (type(queryObj.tableName) == "string") then
+		queryString[#queryString + 1] = " `"..queryObj.tableName.."`";
+	else
+		ErrorNoHalt("[mysql] No table name specified!\n");
+		return;
+	end;
+
+	return table.concat(queryString);
+end;
+
 local function BuildCreateQuery(queryObj)
 	local queryString = {"CREATE TABLE IF NOT EXISTS"};
 
@@ -306,6 +319,8 @@ function QUERY_CLASS:Execute(bQueueQuery)
 		queryString = BuildDeleteQuery(self);
 	elseif (queryType == "drop") then
 		queryString = BuildDropQuery(self);
+	elseif (queryType == "truncate") then
+		queryString = BuildTruncateQuery(self);
 	elseif (queryType == "create") then
 		queryString = BuildCreateQuery(self);
 	end;
@@ -341,6 +356,10 @@ end;
 
 function mysql:Drop(tableName)
 	return QUERY_CLASS:New(tableName, "DROP");
+end;
+
+function mysql:Truncate(tableName)
+	return QUERY_CLASS:New(tableName, "TRUNCATE");
 end;
 
 function mysql:Create(tableName)
