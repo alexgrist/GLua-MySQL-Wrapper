@@ -279,11 +279,11 @@ local function BuildCreateQuery(queryObj)
 			end;
 		end;
 
-		queryString[#queryString + 1] = " "..table.concat(createList, ", ").."," ;
+		queryString[#queryString + 1] = " "..table.concat(createList, ", ");
 	end;
 
 	if (type(queryObj.primaryKey) == "string") then
-		queryString[#queryString + 1] = " PRIMARY KEY";
+		queryString[#queryString + 1] = ", PRIMARY KEY";
 		queryString[#queryString + 1] = " ("..queryObj.primaryKey..")";
 	end;
 
