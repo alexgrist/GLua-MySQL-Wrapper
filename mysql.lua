@@ -423,7 +423,7 @@ end;
 
 -- A function to query the MySQL database.
 function mysql:RawQuery(query, callback, flags, ...)
-	if (!self.connection) then
+	if (!self.connection and Module != "sqlite") then
 		self:Queue(query);
 	end;
 
