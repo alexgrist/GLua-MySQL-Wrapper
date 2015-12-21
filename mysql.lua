@@ -398,7 +398,7 @@ function mysql:Connect(host, username, password, database, port, socket, flags)
 		if (mysqloo) then
 			local clientFlag = flags or 0;
 
-			if (type(socket) == "string") then
+			if (type(socket) ~= "string") then
 				self.connection = mysqloo.connect(host, username, password, database, port);
 			else
 				self.connection = mysqloo.connect(host, username, password, database, port, socket, clientFlag);
