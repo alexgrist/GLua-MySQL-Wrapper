@@ -10,6 +10,7 @@ mysql = mysql or {};
 
 local QueueTable = {};
 local Module = "sqlite";
+local Connected = false;
 local type = type;
 local tostring = tostring;
 local table = table;
@@ -511,6 +512,8 @@ function mysql:Disconnect()
 			return self.connection:Disconnect();	
 		end;
 	end;
+
+	Connected = false;
 end;
 
 function mysql:Think()
@@ -538,6 +541,7 @@ end;
 function mysql:OnConnected()
 	MsgC(Color(25, 235, 25), "[mysql] Connected to the database!\n");
 
+	Connected = true;
 	hook.Call("DatabaseConnected", nil);
 end;
 
@@ -546,6 +550,11 @@ function mysql:OnConnectionFailed(errorText)
 	ErrorNoHalt("[mysql] Unable to connect to the database!\n"..errorText.."\n");
 
 	hook.Call("DatabaseConnectionFailed", nil, errorText);
+end;
+
+-- A function to check whether or not the module is connected to a database.
+function mysql:IsConnected()
+	return Connected;
 end;
 
 return mysql;
