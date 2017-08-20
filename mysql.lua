@@ -452,7 +452,7 @@ function mysql:RawQuery(query, callback, flags, ...)
 
 		queryObj.onSuccess = function(queryObj, result)
 			if (callback) then
-				local bStatus, value = pcall(callback, result, queryObj:status(), queryObj:lastInsert());
+				local bStatus, value = pcall(callback, result, true, queryObj:lastInsert());
 
 				if (!bStatus) then
 					ErrorNoHalt(string.format("[mysql] MySQL Callback Error!\n%s\n", value));
