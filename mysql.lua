@@ -1,7 +1,6 @@
 --[[
-	mysql - 1.0.2
+	mysql - 1.0.3
 	A simple MySQL wrapper for Garry's Mod.
-
 	Alexander Grist-Hucker
 	http://www.alexgrist.com
 --]]
@@ -10,21 +9,16 @@ mysql = mysql or {};
 
 local QueueTable = {};
 local Module = "sqlite";
-local Connected = false;
-local type = type;
-local tostring = tostring;
-local table = table;
+local Encoding = 'utf8'
+local Connected = nil;
+local isnumber, tostring, _table, _string, istable, isfunction, isstring = isnumber, tostring, table, string, istable, isfunction, isstring
+local ErrorNoHalt = ErrorNoHalt
 
---[[
-	Phrases
---]]
+-- # Phrases
+local MODULE_PREFIX = "[mysql]"
+local MODULE_NOT_EXIST = "%s The %s module does not exist!\n";
 
-local MODULE_NOT_EXIST = "[mysql] The %s module does not exist!\n";
-
---[[
-	Begin Query Class.
---]]
-
+-- # Begin Query Class.
 local QUERY_CLASS = {};
 QUERY_CLASS.__index = QUERY_CLASS;
 
@@ -128,35 +122,35 @@ end;
 local function BuildSelectQuery(queryObj)
 	local queryString = {"SELECT"};
 
-	if (type(queryObj.selectList) != "table" or #queryObj.selectList == 0) then
+	if (!istable(queryObj.selectList) or #queryObj.selectList == 0) then
 		queryString[#queryString + 1] = " *";
 	else
-		queryString[#queryString + 1] = " "..table.concat(queryObj.selectList, ", ");
+		queryString[#queryString + 1] = " ".._table.concat(queryObj.selectList, ", ");
 	end;
 
-	if (type(queryObj.tableName) == "string") then
+	if (isstring(queryObj.tableName)) then
 		queryString[#queryString + 1] = " FROM `"..queryObj.tableName.."` ";
 	else
-		ErrorNoHalt("[mysql] No table name specified!\n");
+		ErrorNoHalt(""..MODULE_PREFIX.." No table name specified!\n");
 		return;
 	end;
 
-	if (type(queryObj.whereList) == "table" and #queryObj.whereList > 0) then
+	if (istable(queryObj.whereList) and #queryObj.whereList > 0) then
 		queryString[#queryString + 1] = " WHERE ";
-		queryString[#queryString + 1] = table.concat(queryObj.whereList, " AND ");
+		queryString[#queryString + 1] = _table.concat(queryObj.whereList, " AND ");
 	end;
 
-	if (type(queryObj.orderByList) == "table" and #queryObj.orderByList > 0) then
+	if (istable(queryObj.orderByList) and #queryObj.orderByList > 0) then
 		queryString[#queryString + 1] = " ORDER BY ";
-		queryString[#queryString + 1] = table.concat(queryObj.orderByList, ", ");
+		queryString[#queryString + 1] = _table.concat(queryObj.orderByList, ", ");
 	end;
 
-	if (type(queryObj.limit) == "number") then
+	if (isnumber(queryObj.limit)) then
 		queryString[#queryString + 1] = " LIMIT ";
 		queryString[#queryString + 1] = queryObj.limit;
 	end;
 
-	return table.concat(queryString);
+	return _table.concat(queryString);
 end;
 
 local function BuildInsertQuery(queryObj)
@@ -164,10 +158,10 @@ local function BuildInsertQuery(queryObj)
 	local keyList = {};
 	local valueList = {};
 
-	if (type(queryObj.tableName) == "string") then
+	if (isstring(queryObj.tableName)) then
 		queryString[#queryString + 1] = " `"..queryObj.tableName.."`";
 	else
-		ErrorNoHalt("[mysql] No table name specified!\n");
+		ErrorNoHalt(""..MODULE_PREFIX.." No table name specified!\n");
 		return;
 	end;
 
@@ -180,23 +174,23 @@ local function BuildInsertQuery(queryObj)
 		return;
 	end;
 
-	queryString[#queryString + 1] = " ("..table.concat(keyList, ", ")..")";
-	queryString[#queryString + 1] = " VALUES ("..table.concat(valueList, ", ")..")";
+	queryString[#queryString + 1] = " (".._table.concat(keyList, ", ")..")";
+	queryString[#queryString + 1] = " VALUES (".._table.concat(valueList, ", ")..")";
 
-	return table.concat(queryString);
+	return _table.concat(queryString);
 end;
 
 local function BuildUpdateQuery(queryObj)
 	local queryString = {"UPDATE"};
 
-	if (type(queryObj.tableName) == "string") then
+	if (isstring(queryObj.tableName)) then
 		queryString[#queryString + 1] = " `"..queryObj.tableName.."`";
 	else
-		ErrorNoHalt("[mysql] No table name specified!\n");
+		ErrorNoHalt(""..MODULE_PREFIX.." No table name specified!\n");
 		return;
 	end;
 
-	if (type(queryObj.updateList) == "table" and #queryObj.updateList > 0) then
+	if (istable(queryObj.updateList) and #queryObj.updateList > 0) then
 		local updateList = {};
 
 		queryString[#queryString + 1] = " SET";
@@ -205,110 +199,110 @@ local function BuildUpdateQuery(queryObj)
 			updateList[#updateList + 1] = queryObj.updateList[i][1].." = "..queryObj.updateList[i][2];
 		end;
 
-		queryString[#queryString + 1] = " "..table.concat(updateList, ", ");
+		queryString[#queryString + 1] = " ".._table.concat(updateList, ", ");
 	end;
 
-	if (type(queryObj.whereList) == "table" and #queryObj.whereList > 0) then
+	if (istable(queryObj.whereList) and #queryObj.whereList > 0) then
 		queryString[#queryString + 1] = " WHERE ";
-		queryString[#queryString + 1] = table.concat(queryObj.whereList, " AND ");
+		queryString[#queryString + 1] = _table.concat(queryObj.whereList, " AND ");
 	end;
 
-	if (type(queryObj.offset) == "number") then
+	if (isnumber(queryObj.offset)) then
 		queryString[#queryString + 1] = " OFFSET ";
 		queryString[#queryString + 1] = queryObj.offset;
 	end;
 
-	return table.concat(queryString);
+	return _table.concat(queryString);
 end;
 
 local function BuildDeleteQuery(queryObj)
 	local queryString = {"DELETE FROM"}
 
-	if (type(queryObj.tableName) == "string") then
+	if (isstring(queryObj.tableName)) then
 		queryString[#queryString + 1] = " `"..queryObj.tableName.."`";
 	else
-		ErrorNoHalt("[mysql] No table name specified!\n");
+		ErrorNoHalt(""..MODULE_PREFIX.." No table name specified!\n");
 		return;
 	end;
 
-	if (type(queryObj.whereList) == "table" and #queryObj.whereList > 0) then
+	if (istable(queryObj.whereList) and #queryObj.whereList > 0) then
 		queryString[#queryString + 1] = " WHERE ";
-		queryString[#queryString + 1] = table.concat(queryObj.whereList, " AND ");
+		queryString[#queryString + 1] = _table.concat(queryObj.whereList, " AND ");
 	end;
 
-	if (type(queryObj.limit) == "number") then
+	if (isnumber(queryObj.limit)) then
 		queryString[#queryString + 1] = " LIMIT ";
 		queryString[#queryString + 1] = queryObj.limit;
 	end;
 
-	return table.concat(queryString);
+	return _table.concat(queryString);
 end;
 
 local function BuildDropQuery(queryObj)
 	local queryString = {"DROP TABLE"}
 
-	if (type(queryObj.tableName) == "string") then
+	if (isstring(queryObj.tableName)) then
 		queryString[#queryString + 1] = " `"..queryObj.tableName.."`";
 	else
-		ErrorNoHalt("[mysql] No table name specified!\n");
+		ErrorNoHalt(""..MODULE_PREFIX.." No table name specified!\n");
 		return;
 	end;
 
-	return table.concat(queryString);
+	return _table.concat(queryString);
 end;
 
 local function BuildTruncateQuery(queryObj)
 	local queryString = {"TRUNCATE TABLE"}
 
-	if (type(queryObj.tableName) == "string") then
+	if (isstring(queryObj.tableName)) then
 		queryString[#queryString + 1] = " `"..queryObj.tableName.."`";
 	else
-		ErrorNoHalt("[mysql] No table name specified!\n");
+		ErrorNoHalt(""..MODULE_PREFIX.." No table name specified!\n");
 		return;
 	end;
 
-	return table.concat(queryString);
+	return _table.concat(queryString);
 end;
 
 local function BuildCreateQuery(queryObj)
 	local queryString = {"CREATE TABLE IF NOT EXISTS"};
 
-	if (type(queryObj.tableName) == "string") then
+	if (isstring(queryObj.tableName)) then
 		queryString[#queryString + 1] = " `"..queryObj.tableName.."`";
 	else
-		ErrorNoHalt("[mysql] No table name specified!\n");
+		ErrorNoHalt(""..MODULE_PREFIX.." No table name specified!\n");
 		return;
 	end;
 
 	queryString[#queryString + 1] = " (";
 
-	if (type(queryObj.createList) == "table" and #queryObj.createList > 0) then
+	if (istable(queryObj.createList) and #queryObj.createList > 0) then
 		local createList = {};
 
 		for i = 1, #queryObj.createList do
 			if (Module == "sqlite") then
-				createList[#createList + 1] = queryObj.createList[i][1].." "..string.gsub(string.gsub(string.gsub(queryObj.createList[i][2], "AUTO_INCREMENT", ""), "AUTOINCREMENT", ""), "INT ", "INTEGER ");
+				createList[#createList + 1] = queryObj.createList[i][1].." ".._string.gsub(_string.gsub(_string.gsub(queryObj.createList[i][2], "AUTO_INCREMENT", ""), "AUTOINCREMENT", ""), "INT ", "INTEGER ");
 			else
 				createList[#createList + 1] = queryObj.createList[i][1].." "..queryObj.createList[i][2];
 			end;
 		end;
 
-		queryString[#queryString + 1] = " "..table.concat(createList, ", ");
+		queryString[#queryString + 1] = " ".._table.concat(createList, ", ");
 	end;
 
-	if (type(queryObj.primaryKey) == "string") then
+	if (isstring(queryObj.primaryKey)) then
 		queryString[#queryString + 1] = ", PRIMARY KEY";
 		queryString[#queryString + 1] = " ("..queryObj.primaryKey..")";
 	end;
 
 	queryString[#queryString + 1] = " )";
 
-	return table.concat(queryString); 
+	return _table.concat(queryString); 
 end;
 
 function QUERY_CLASS:Execute(bQueueQuery)
 	local queryString = nil;
-	local queryType = string.lower(self.queryType);
+	local queryType = _string.lower(self.queryType);
 
 	if (queryType == "select") then
 		queryString = BuildSelectQuery(self);
@@ -326,7 +320,7 @@ function QUERY_CLASS:Execute(bQueueQuery)
 		queryString = BuildCreateQuery(self);
 	end;
 
-	if (type(queryString) == "string") then
+	if (isstring(queryString)) then
 		if (!bQueueQuery) then
 			return mysql:RawQuery(queryString, self.callback);
 		else
@@ -370,11 +364,11 @@ end;
 -- A function to connect to the MySQL database.
 function mysql:Connect(host, username, password, database, port, socket, flags)
 	if (!port) then
-		port = 3306;
+		port = 3306; -- # [pg: 5432]
 	end;
 
 	if (Module == "tmysql4") then
-		if (type(tmysql) != "table") then
+		if (!istable(tmysql)) then
 			require("tmysql4");
 		end;
 
@@ -389,36 +383,67 @@ function mysql:Connect(host, username, password, database, port, socket, flags)
 				self:OnConnected();
 			end;
 		else
-			ErrorNoHalt(string.format(MODULE_NOT_EXIST, Module));
+			ErrorNoHalt(_string.format(MODULE_NOT_EXIST, MODULE_PREFIX, Module));
 		end;
 	elseif (Module == "mysqloo") then
-		if (type(mysqloo) != "table") then
+		if (!istable(mysqloo)) then
 			require("mysqloo");
 		end;
 	
 		if (mysqloo) then
 			local clientFlag = flags or 0;
 
-			if (type(socket) ~= "string") then
+			if (!isstring(socket)) then
 				self.connection = mysqloo.connect(host, username, password, database, port);
 			else
 				self.connection = mysqloo.connect(host, username, password, database, port, socket, clientFlag);
 			end;
 
 			self.connection.onConnected = function(database)
-				mysql:OnConnected();
+				local success, err = database:setCharacterSet(Encoding)
+				if !success then
+					ErrorNoHalt(_string.format("%s Failed to set connection encoding!\n%s\n", MODULE_PREFIX, err));
+				end
+				
+				self:OnConnected();
 			end;
 
 			self.connection.onConnectionFailed = function(database, errorText)
-				mysql:OnConnectionFailed(errorText);
+				self:OnConnectionFailed(errorText);
 			end;		
 
 			self.connection:connect();
+			
+			-- # ping it every 30 seconds to make sure we're not losing connection
+			timer.Create("Mysqloo#keep_alive", 30, 0, function()
+				self.connection:ping()
+			end)
 		else
-			ErrorNoHalt(string.format(MODULE_NOT_EXIST, Module));
+			ErrorNoHalt(_string.format(MODULE_NOT_EXIST, Module));
 		end;
+	elseif (Module == "postgresql") then
+		if (!istable(pg)) then
+			require("pg");
+		end;
+		
+		if (pg) then
+			self.connection = pg.new_connection()
+			local success, err = self.connection:connect(host, username, password, database, port)
+			if success then
+				success, err = self.connection:set_encoding(Encoding)
+				if !success then
+					ErrorNoHalt(_string.format("%s Failed to set connection encoding!\n%s\n", MODULE_PREFIX, err));
+				end
+				
+				self:OnConnected();
+			else
+				self:OnConnectionFailed(err);
+			end
+		else
+			ErrorNoHalt(_string.format(MODULE_NOT_EXIST, Module));
+		end
 	elseif (Module == "sqlite") then
-		mysql:OnConnected();
+		self:OnConnected();
 	end;
 end;
 
@@ -435,59 +460,80 @@ function mysql:RawQuery(query, callback, flags, ...)
 			local queryStatus = result[1]["status"];
 
 			if (queryStatus) then
-				if (type(callback) == "function") then
+				if (isfunction(callback)) then
 					local bStatus, value = pcall(callback, result[1]["data"], queryStatus, result[1]["lastid"]);
 
 					if (!bStatus) then
-						ErrorNoHalt(string.format("[mysql] MySQL Callback Error!\n%s\n", value));
+						ErrorNoHalt(_string.format("%s MySQL Callback Error!\n%s\n", MODULE_PREFIX, value));
 					end;
 				end;
 			else
-				ErrorNoHalt(string.format("[mysql] MySQL Query Error!\nQuery: %s\n%s\n", query, result[1]["error"]));
+				ErrorNoHalt(_string.format("%s MySQL Query Error!\nQuery: %s\n%s\n", MODULE_PREFIX, query, result[1]["error"]));
 			end;
 		end, queryFlag, ...);
 	elseif (Module == "mysqloo") then
 		local queryObj = self.connection:query(query);
 
 		queryObj:setOption(mysqloo.OPTION_NAMED_FIELDS);
-
 		queryObj.onSuccess = function(queryObj, result)
 			if (callback) then
-				local bStatus, value = pcall(callback, result, true, queryObj:lastInsert());
+				local bStatus, value = pcall(callback, result, query, queryObj:lastInsert());
 
 				if (!bStatus) then
-					ErrorNoHalt(string.format("[mysql] MySQL Callback Error!\n%s\n", value));
+					ErrorNoHalt(_string.format("%s MySQL Callback Error!\n%s\n", MODULE_PREFIX, value));
 				end;
 			end;
 		end;
 
 		queryObj.onError = function(queryObj, errorText)
-			ErrorNoHalt(string.format("[mysql] MySQL Query Error!\nQuery: %s\n%s\n", query, errorText));
+			ErrorNoHalt(_string.format("%s MySQL Query Error!\nQuery: %s\n%s\n", MODULE_PREFIX, query, errorText));
 		end;
 
 		queryObj:start();
+	elseif (Module == "postgresql") then
+		local queryObj = self.connection:query(query);
+		local qStart = os.clock()
+
+		queryObj:on("success", function(result, size)
+			if (callback) then
+				local bStatus, value = pcall(callback, result, query, math.Round(os.clock() - qStart, 3));
+
+				if (!bStatus) then
+					ErrorNoHalt(_string.format("%s PostgreSQL Callback Error!\n%s\n", MODULE_PREFIX, value));
+				end;
+			end;
+		end)
+
+		queryObj:on("error", function(errorText)
+			ErrorNoHalt(_string.format("%s PostgreSQL Query Error!\nQuery: %s\n%s\n", MODULE_PREFIX, query, errorText));
+		end)
+
+		queryObj:set_sync(false)
+		queryObj:run()
+		
+		qStart = nil
 	elseif (Module == "sqlite") then
 		local result = sql.Query(query);
 
 		if (result == false) then
-			ErrorNoHalt(string.format("[mysql] SQL Query Error!\nQuery: %s\n%s\n", query, sql.LastError()));
+			ErrorNoHalt(_string.format("%s SQL Query Error!\nQuery: %s\n%s\n", MODULE_PREFIX, query, sql.LastError()));
 		else
 			if (callback) then
 				local bStatus, value = pcall(callback, result);
 
 				if (!bStatus) then
-					ErrorNoHalt(string.format("[mysql] SQL Callback Error!\n%s\n", value));
+					ErrorNoHalt(_string.format("%s SQL Callback Error!\n%s\n", MODULE_PREFIX, value));
 				end;
 			end;
 		end;
 	else
-		ErrorNoHalt(string.format("[mysql] Unsupported module \"%s\"!\n", Module));
+		ErrorNoHalt(_string.format("%s Unsupported module \"%s\"!\n", MODULE_PREFIX, Module));
 	end;
 end;
 
 -- A function to add a query to the queue.
 function mysql:Queue(queryString, callback)
-	if (type(queryString) == "string") then
+	if (isstring(queryString)) then
 		QueueTable[#QueueTable + 1] = {queryString, callback};
 	end;
 end;
@@ -497,11 +543,11 @@ function mysql:Escape(text)
 	if (self.connection) then
 		if (Module == "tmysql4") then
 			return self.connection:Escape(text);
-		elseif (Module == "mysqloo") then
+		elseif (Module == "mysqloo" or Module == "postgresql") then
 			return self.connection:escape(text);
-		end;
+		end
 	else
-		return sql.SQLStr(string.gsub(text, "\"", "'"), true);
+		return sql.SQLStr(_string.gsub(text, "\"", "'"), true);
 	end;
 end;
 
@@ -509,25 +555,29 @@ end;
 function mysql:Disconnect()
 	if (self.connection) then
 		if (Module == "tmysql4") then
-			return self.connection:Disconnect();	
+			self.connection:Disconnect();	
+		elseif (Module == "mysqloo") then
+			self.connection:disconnect(true);
+		elseif (Module == "postgresql") then
+			self.connection:disconnect();
 		end;
 	end;
 
-	Connected = false;
+	Connected = nil;
+	self.connection = nil;
 end;
 
 function mysql:Think()
 	if (#QueueTable > 0) then
-		if (type(QueueTable[1]) == "table") then
+		if (istable(QueueTable[1])) then
 			local queueObj = QueueTable[1];
 			local queryString = queueObj[1];
-			local callback = queueObj[2];
 			
-			if (type(queryString) == "string") then
-				self:RawQuery(queryString, callback);
+			if (isstring(queryString)) then
+				self:RawQuery(queryString, queueObj[2]);
 			end;
 
-			table.remove(QueueTable, 1);
+			_table.remove(QueueTable, 1);
 		end;
 	end;
 end;
@@ -539,16 +589,14 @@ end;
 
 -- Called when the database connects sucessfully.
 function mysql:OnConnected()
-	MsgC(Color(25, 235, 25), "[mysql] Connected to the database!\n");
-
 	Connected = true;
+	MsgC(Color(25, 235, 25), ""..MODULE_PREFIX.." Connected to the database using "..Module.."!\n")
 	hook.Run("DatabaseConnected");
 end;
 
 -- Called when the database connection fails.
 function mysql:OnConnectionFailed(errorText)
-	ErrorNoHalt("[mysql] Unable to connect to the database!\n"..errorText.."\n");
-
+	ErrorNoHalt(""..MODULE_PREFIX.." Unable to connect to the database!\n"..errorText.."\n");
 	hook.Run("DatabaseConnectionFailed", errorText);
 end;
 
