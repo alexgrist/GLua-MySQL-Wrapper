@@ -514,8 +514,6 @@ end
 
 -- A function to query the MySQL database.
 function mysql:RawQuery(query, callback, flags, ...)
-	print(query)
-
 	if (self.module == "mysqloo") then
 		local queryObj = self.connection:query(query)
 
