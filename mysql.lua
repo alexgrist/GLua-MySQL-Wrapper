@@ -14,9 +14,7 @@ local QueueTable = {}
 local tostring = tostring
 local table = table
 
---[[
-	Replacement tables
---]]
+-- Replacement tables
 
 local Replacements = {
 	sqlite = {
@@ -30,15 +28,11 @@ local Replacements = {
 	}
 }
 
---[[
-	Phrases
---]]
+-- Phrases
 
 local MODULE_NOT_EXIST = "[mysql] The %s module does not exist!\n"
 
---[[
-	Begin Query Class.
---]]
+-- Begin Query Class.
 
 local QUERY_CLASS = {}
 QUERY_CLASS.__index = QUERY_CLASS
@@ -604,14 +598,12 @@ end
 -- Called when the database connects sucessfully.
 function mysql:OnConnected()
 	MsgC(Color(25, 235, 25), "[mysql] Connected to the database!\n")
-
 	hook.Run("DatabaseConnected")
 end
 
 -- Called when the database connection fails.
 function mysql:OnConnectionFailed(errorText)
 	ErrorNoHalt(string.format("[mysql] Unable to connect to the database!\n%s\n", errorText))
-
 	hook.Run("DatabaseConnectionFailed", errorText)
 end
 
