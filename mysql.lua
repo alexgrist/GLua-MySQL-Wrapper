@@ -109,7 +109,7 @@ function QUERY_CLASS:WhereIn(key, value)
 	local bFirst = true
 
 	for k, v in pairs(value) do
-		values = values .. (bFirst and "" or ", ") .. self:Escape(v)
+		values = values .. (bFirst and "" or ", ") .. "'" .. self:Escape(v) .. "'"
 		bFirst = false
 	end
 
@@ -208,6 +208,11 @@ local function BuildSelectQuery(queryObj)
 	if (isnumber(queryObj.limit)) then
 		queryString[#queryString + 1] = " LIMIT "
 		queryString[#queryString + 1] = queryObj.limit
+	end
+	
+	if (isnumber(queryObj.offset)) then
+		queryString[#queryString + 1] = " OFFSET "
+		queryString[#queryString + 1] = queryObj.offset
 	end
 
 	if (isnumber(queryObj.offset)) then
